@@ -1,0 +1,8 @@
+name = "kana-learning"
+compatibility_date = "2025-08-04"
+
+[env.production]
+route = { pattern = "*", zone_name = "" }
+
+[[env.production.assets]]
+directory = "."
