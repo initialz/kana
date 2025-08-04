@@ -1,0 +1,9 @@
+{
+  "name": "kana-learning",
+  "version": "1.0.0",
+  "description": "Japanese Kana Learning Tool",
+  "scripts": {
+    "build": "mkdir -p dist && cp -r *.html *.css *.js *.md *.pdf dist/ 2>/dev/null || cp *.html *.css *.js dist/"
+  },
+  "devDependencies": {}
+}
