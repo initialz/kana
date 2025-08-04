@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>假名记忆工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 用户选择界面 -->
+        <div id="user-selection" class="screen">
+            <h1>假名记忆工具</h1>
+            <div class="user-section">
+                <h2>选择用户</h2>
+                <div id="user-list" class="user-list">
+                    <!-- 用户按钮将在这里动态生成 -->
+                </div>
+                <div class="new-user-section">
+                    <h3>创建新用户</h3>
+                    <div class="new-user">
+                        <input type="text" id="new-user-name" placeholder="输入新用户名">
+                        <button id="create-user">创建用户</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 练习模式选择界面 -->
+        <div id="mode-selection" class="screen hidden">
+            <div class="header">
+                <h2>选择练习模式</h2>
+                <div class="user-info">
+                    当前用户: <span id="current-user"></span>
+                    <button id="switch-user">切换用户</button>
+                </div>
+            </div>
+            <div class="mode-buttons">
+                <button id="hiragana-mode" class="mode-btn">
+                    <h3>平假名练习</h3>
+                    <p>练习平假名的罗马音读音</p>
+                </button>
+                <button id="katakana-mode" class="mode-btn">
+                    <h3>片假名练习</h3>
+                    <p>练习片假名的罗马音读音</p>
+                </button>
+                <button id="n5-vocab-mode" class="mode-btn">
+                    <h3>N5背单词</h3>
+                    <p>学习日语N5级别单词</p>
+                </button>
+                <button id="n4-vocab-mode" class="mode-btn">
+                    <h3>N4背单词</h3>
+                    <p>学习日语N4级别单词</p>
+                </button>
+                <button id="stats-mode" class="mode-btn">
+                    <h3>学习统计</h3>
+                    <p>查看学习进度和趋势</p>
+                </button>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <span>平假名进度:</span>
+                    <span id="hiragana-progress">0/0</span>
+                    <button id="hiragana-detail" class="detail-btn">详情</button>
+                </div>
+                <div class="stat-item">
+                    <span>片假名进度:</span>
+                    <span id="katakana-progress">0/0</span>
+                    <button id="katakana-detail" class="detail-btn">详情</button>
+                </div>
+                <div class="stat-item">
+                    <span>N5单词进度:</span>
+                    <span id="n5vocab-progress">0/0</span>
+                    <button id="n5vocab-detail" class="detail-btn">详情</button>
+                </div>
+                <div class="stat-item">
+                    <span>N4单词进度:</span>
+                    <span id="n4vocab-progress">0/0</span>
+                    <button id="n4vocab-detail" class="detail-btn">详情</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- N5背单词界面 -->
+        <div id="vocab-practice-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-vocab">返回</button>
+                <h2 id="vocab-practice-title">N5背单词</h2>
+                <div class="score">
+                    正确: <span id="vocab-correct-count">0</span> | 
+                    错误: <span id="vocab-wrong-count">0</span>
+                </div>
+            </div>
+            
+            <div class="vocab-practice-area">
+                <div class="word-display">
+                    <div class="word-kana" id="vocab-current-kana">がっこう</div>
+                    <div class="word-type" id="vocab-current-type">名词</div>
+                </div>
+                
+                <div class="vocab-choices-area">
+                    <div class="choice-buttons">
+                        <button class="choice-btn" data-choice="0" data-label="1" id="choice-0"></button>
+                        <button class="choice-btn" data-choice="1" data-label="2" id="choice-1"></button>
+                        <button class="choice-btn" data-choice="2" data-label="3" id="choice-2"></button>
+                        <button class="choice-btn" data-choice="3" data-label="4" id="choice-3"></button>
+                    </div>
+                </div>
+                
+                <div id="vocab-feedback" class="feedback hidden">
+                    <span id="vocab-feedback-text"></span>
+                    <button id="vocab-next-question">下一个单词</button>
+                </div>
+                
+                <div class="keyboard-hint">
+                    <span>💡 提示：可以使用键盘 1-4 数字键快速选择答案，回车键进入下一题</span>
+                </div>
+            </div>
+            
+            <div class="progress-info">
+                <div class="progress-bar">
+                    <div id="vocab-progress-fill"></div>
+                </div>
+                <span id="vocab-progress-text">正确率: 0%</span>
+            </div>
+        </div>
+
+        <!-- N4背单词界面 -->
+        <div id="n4-vocab-practice-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-n4vocab">返回</button>
+                <h2 id="n4-vocab-practice-title">N4背单词</h2>
+                <div class="score">
+                    正确: <span id="n4vocab-correct-count">0</span> | 
+                    错误: <span id="n4vocab-wrong-count">0</span>
+                </div>
+            </div>
+            
+            <div class="vocab-practice-area">
+                <div class="word-display">
+                    <div class="word-kana" id="n4vocab-current-kana">あいさつ</div>
+                    <div class="word-type" id="n4vocab-current-type">名词</div>
+                </div>
+                
+                <div class="vocab-choices-area">
+                    <div class="choice-buttons">
+                        <button class="choice-btn n4-choice" data-choice="0" data-label="1" id="n4choice-0"></button>
+                        <button class="choice-btn n4-choice" data-choice="1" data-label="2" id="n4choice-1"></button>
+                        <button class="choice-btn n4-choice" data-choice="2" data-label="3" id="n4choice-2"></button>
+                        <button class="choice-btn n4-choice" data-choice="3" data-label="4" id="n4choice-3"></button>
+                    </div>
+                </div>
+                
+                <div id="n4vocab-feedback" class="feedback hidden">
+                    <span id="n4vocab-feedback-text"></span>
+                    <button id="n4vocab-next-question">下一个单词</button>
+                </div>
+                
+                <div class="keyboard-hint">
+                    <span>💡 提示：可以使用键盘 1-4 数字键快速选择答案，回车键进入下一题</span>
+                </div>
+            </div>
+            
+            <div class="progress-info">
+                <div class="progress-bar">
+                    <div id="n4vocab-progress-fill"></div>
+                </div>
+                <span id="n4vocab-progress-text">正确率: 0%</span>
+            </div>
+        </div>
+
+        <!-- 练习界面 -->
+        <div id="practice-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes">返回</button>
+                <h2 id="practice-title">平假名练习</h2>
+                <div class="score">
+                    正确: <span id="correct-count">0</span> | 
+                    错误: <span id="wrong-count">0</span>
+                </div>
+            </div>
+            
+            <div class="practice-area">
+                <div class="kana-display">
+                    <span id="current-kana">あ</span>
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" id="romaji-input" placeholder="输入罗马音..." autocomplete="off">
+                    <button id="submit-answer">提交</button>
+                </div>
+                
+                <div id="feedback" class="feedback hidden">
+                    <span id="feedback-text"></span>
+                    <button id="next-question">下一题</button>
+                </div>
+            </div>
+            
+            <div class="progress-info">
+                <div class="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <span id="progress-text">进度: 0%</span>
+            </div>
+        </div>
+
+        <!-- 进度详情界面 -->
+        <div id="progress-detail-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-detail">返回</button>
+                <h2 id="detail-mode-title">平假名进度详情</h2>
+                <div class="user-info">
+                    当前用户: <span id="detail-current-user"></span>
+                </div>
+            </div>
+            
+            <div class="progress-detail-content">
+                <div class="progress-summary">
+                    <div class="summary-stats">
+                        <button class="filter-btn active" data-filter="all">
+                            <span class="label">全部</span>
+                            <span class="value" id="total-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="mastered">
+                            <span class="label">已掌握</span>
+                            <span class="value" id="mastered-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="learning">
+                            <span class="label">学习中</span>
+                            <span class="value" id="learning-count">0</span>
+                        </button>
+                        <button class="filter-btn" data-filter="not-started">
+                            <span class="label">未开始</span>
+                            <span class="value" id="not-started-count">0</span>
+                        </button>
+                        <div class="summary-item">
+                            <span class="label">整体正确率</span>
+                            <span class="value" id="overall-accuracy-rate">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="kana-list-container">
+                    <div class="list-header">
+                        <h3>假名详情 (按错误率排序)</h3>
+                        <div class="legend">
+                            <span class="legend-item mastered">已掌握 (4-5级)</span>
+                            <span class="legend-item learning">学习中 (2-3级)</span>
+                            <span class="legend-item not-started">未开始 (1级)</span>
+                        </div>
+                    </div>
+                    <div id="kana-detail-list" class="kana-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计界面 -->
+        <div id="stats-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-stats">返回</button>
+                <h2>学习统计</h2>
+                <div class="user-info">
+                    当前用户: <span id="stats-current-user"></span>
+                </div>
+            </div>
+            
+            <div class="stats-content">
+                <div class="stats-summary">
+                    <div class="summary-card">
+                        <h3>总体统计</h3>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <span class="label">总练习天数</span>
+                                <span class="value" id="total-days">0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">总答题数</span>
+                                <span class="value" id="total-questions">0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">总体正确率</span>
+                                <span class="value" id="overall-accuracy">0%</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="label">连续练习</span>
+                                <span class="value" id="streak-days">0天</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats-charts">
+                    <div class="chart-card">
+                        <h3>每日正确率趋势</h3>
+                        <div class="chart-filters">
+                            <label class="filter-checkbox">
+                                <input type="checkbox" id="filter-hiragana" checked>
+                                <span class="checkbox-label">平假名</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" id="filter-katakana" checked>
+                                <span class="checkbox-label">片假名</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" id="filter-n5vocab" checked>
+                                <span class="checkbox-label">N5单词</span>
+                            </label>
+                            <label class="filter-checkbox">
+                                <input type="checkbox" id="filter-n4vocab" checked>
+                                <span class="checkbox-label">N4单词</span>
+                            </label>
+                        </div>
+                        <div class="chart-container">
+                            <div id="accuracy-chart" class="chart"></div>
+                            <div class="chart-legend">
+                                <div class="legend-item">
+                                    <div class="legend-color hiragana"></div>
+                                    <span>平假名</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color katakana"></div>
+                                    <span>片假名</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color n5vocab"></div>
+                                    <span>N5单词</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color n4vocab"></div>
+                                    <span>N4单词</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card">
+                        <h3>最近7天练习记录</h3>
+                        <div id="recent-stats" class="recent-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
