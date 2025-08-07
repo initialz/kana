@@ -1229,6 +1229,30 @@ class UserManager {
             n4vocab: getProgressStats(n4VocabProgress, N4_WORDS.length)
         };
     }
+
+    deleteUser(username) {
+        if (!username) return false;
+        
+        const data = this.loadUsers();
+        
+        // 检查用户是否存在
+        if (!data.users[username]) {
+            return false;
+        }
+        
+        // 删除用户数据
+        delete data.users[username];
+        
+        // 如果删除的是当前用户，清除当前用户状态
+        if (data.currentUser === username) {
+            data.currentUser = null;
+        }
+        
+        // 保存更新后的数据
+        localStorage.setItem('kanaMemoryData', JSON.stringify(data));
+        
+        return true;
+    }
 }
 
 // 应用控制类
@@ -1400,11 +1424,26 @@ class KanaApp {
         }
         
         users.forEach(user => {
+            const userItem = document.createElement('div');
+            userItem.className = 'user-item';
+            
             const userButton = document.createElement('button');
             userButton.className = 'user-button';
             userButton.textContent = user;
             userButton.addEventListener('click', () => this.selectUserAndStart(user));
-            userList.appendChild(userButton);
+            
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'user-delete-btn';
+            deleteButton.innerHTML = '×';
+            deleteButton.title = `删除用户 ${user}`;
+            deleteButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteUser(user);
+            });
+            
+            userItem.appendChild(userButton);
+            userItem.appendChild(deleteButton);
+            userList.appendChild(userItem);
         });
     }
 
@@ -1415,6 +1454,33 @@ class KanaApp {
         }, 100);
     }
 
+    deleteUser(username) {
+        const confirmDelete = confirm(`确定要删除用户 "${username}" 吗？\n\n删除后将无法恢复该用户的所有学习数据！`);
+        
+        if (!confirmDelete) {
+            return;
+        }
+        
+        // 删除用户数据
+        const success = this.userManager.deleteUser(username);
+        
+        if (success) {
+            // 检查是否删除的是当前用户
+            const data = JSON.parse(localStorage.getItem('kanaMemoryData') || '{}');
+            if (data.currentUser === username) {
+                // 清除当前用户状态
+                data.currentUser = null;
+                localStorage.setItem('kanaMemoryData', JSON.stringify(data));
+                currentUser = null;
+            }
+            
+            // 重新加载用户列表
+            this.loadUserList();
+            alert(`用户 "${username}" 已删除`);
+        } else {
+            alert('删除用户失败');
+        }
+    }
 
     setCurrentUser(username) {
         currentUser = username;
