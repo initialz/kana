@@ -99,6 +99,15 @@ body {
     transform: scale(1.2);
 }
 
+.trash-icon {
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.user-delete-btn:hover .trash-icon {
+    color: #ff4757;
+}
+
 .user-button:hover {
     background: #667eea;
     color: white;
