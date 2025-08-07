@@ -1260,6 +1260,16 @@ class KanaApp {
     constructor() {
         this.userManager = new UserManager();
         this.memorySystem = new MemorySystem();
+        
+        // 翻页相关属性
+        this.statsCurrentPage = 1;
+        this.statsItemsPerPage = 10;
+        this.statsAllItems = [];
+        
+        this.detailCurrentPage = 1;
+        this.detailItemsPerPage = 20;
+        this.detailAllItems = [];
+        
         this.initializeApp();
     }
 
@@ -1339,6 +1349,12 @@ class KanaApp {
         document.querySelectorAll('.chart-filters input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', () => this.updateAccuracyChart());
         });
+        
+        // 翻页事件
+        document.getElementById('stats-prev-btn').addEventListener('click', () => this.prevStatsPage());
+        document.getElementById('stats-next-btn').addEventListener('click', () => this.nextStatsPage());
+        document.getElementById('detail-prev-btn').addEventListener('click', () => this.prevDetailPage());
+        document.getElementById('detail-next-btn').addEventListener('click', () => this.nextDetailPage());
         
         // 回车提交答案
         document.getElementById('romaji-input').addEventListener('keypress', (e) => {
@@ -2327,23 +2343,34 @@ class KanaApp {
         if (!this.currentKanaDetails) return;
         
         // 根据筛选条件过滤数据
-        let filteredDetails;
         if (filter === 'all') {
-            filteredDetails = this.currentKanaDetails;
+            this.detailAllItems = this.currentKanaDetails;
         } else {
-            filteredDetails = this.currentKanaDetails.filter(kana => kana.status === filter);
+            this.detailAllItems = this.currentKanaDetails.filter(kana => kana.status === filter);
         }
         
-        // 更新假名列表
-        const listContainer = document.getElementById('kana-detail-list');
-        listContainer.innerHTML = '';
+        // 重置到第一页
+        this.detailCurrentPage = 1;
         
-        if (filteredDetails.length === 0) {
+        if (this.detailAllItems.length === 0) {
+            const listContainer = document.getElementById('kana-detail-list');
             listContainer.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">暂无相关数据</div>';
+            this.updateDetailPagination();
             return;
         }
         
-        filteredDetails.forEach(kana => {
+        this.renderDetailPage();
+    }
+    
+    renderDetailPage() {
+        const listContainer = document.getElementById('kana-detail-list');
+        listContainer.innerHTML = '';
+        
+        const startIndex = (this.detailCurrentPage - 1) * this.detailItemsPerPage;
+        const endIndex = startIndex + this.detailItemsPerPage;
+        const pageItems = this.detailAllItems.slice(startIndex, endIndex);
+        
+        pageItems.forEach(kana => {
             const item = document.createElement('div');
             item.className = `kana-item ${kana.status}`;
             
@@ -2354,37 +2381,44 @@ class KanaApp {
             }[kana.status];
             
             item.innerHTML = `
-                <div class="kana-char">${kana.char}</div>
-                <div class="kana-info">
-                    <div class="kana-romaji">${kana.romaji}</div>
-                    <div class="kana-example">${kana.example}</div>
-                </div>
-                <div class="kana-stats">
-                    <div class="stat-row">
-                        <span class="stat-label">状态:</span>
-                        <span class="stat-value status-${kana.status}">${statusText}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">等级:</span>
-                        <span class="stat-value">${kana.level}/5</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">练习次数:</span>
-                        <span class="stat-value">${kana.totalReviews}</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">正确率:</span>
-                        <span class="stat-value">${kana.accuracy}%</span>
-                    </div>
-                    <div class="stat-row">
-                        <span class="stat-label">错误率:</span>
-                        <span class="stat-value error-rate">${kana.errorRate}%</span>
-                    </div>
+                <div class="char">${kana.char}</div>
+                <div class="info">
+                    <div class="level">${statusText}</div>
+                    <div class="accuracy">${kana.accuracy}%</div>
                 </div>
             `;
             
             listContainer.appendChild(item);
         });
+        
+        this.updateDetailPagination();
+    }
+    
+    // 详情页面翻页方法
+    updateDetailPagination() {
+        const totalPages = Math.ceil(this.detailAllItems.length / this.detailItemsPerPage);
+        const prevBtn = document.getElementById('detail-prev-btn');
+        const nextBtn = document.getElementById('detail-next-btn');
+        const pageInfo = document.getElementById('detail-page-info');
+        
+        prevBtn.disabled = this.detailCurrentPage <= 1;
+        nextBtn.disabled = this.detailCurrentPage >= totalPages;
+        pageInfo.textContent = `第 ${this.detailCurrentPage} 页，共 ${totalPages} 页`;
+    }
+    
+    prevDetailPage() {
+        if (this.detailCurrentPage > 1) {
+            this.detailCurrentPage--;
+            this.renderDetailPage();
+        }
+    }
+    
+    nextDetailPage() {
+        const totalPages = Math.ceil(this.detailAllItems.length / this.detailItemsPerPage);
+        if (this.detailCurrentPage < totalPages) {
+            this.detailCurrentPage++;
+            this.renderDetailPage();
+        }
     }
 
     updateStatsDisplay() {
@@ -2648,15 +2682,29 @@ class KanaApp {
         const recentList = document.getElementById('recent-stats');
         recentList.innerHTML = '';
         
-        const sortedDates = Object.keys(dailyStats).sort().reverse().slice(0, 7);
+        // 存储所有数据用于翻页
+        this.statsAllItems = Object.keys(dailyStats).sort().reverse().map(date => {
+            return { date, stats: dailyStats[date] };
+        });
         
-        if (sortedDates.length === 0) {
+        if (this.statsAllItems.length === 0) {
             recentList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">暂无练习记录</div>';
+            this.updateStatsPagination();
             return;
         }
         
-        sortedDates.forEach(date => {
-            const dayStats = dailyStats[date];
+        this.renderStatsPage();
+    }
+    
+    renderStatsPage() {
+        const recentList = document.getElementById('recent-stats');
+        recentList.innerHTML = '';
+        
+        const startIndex = (this.statsCurrentPage - 1) * this.statsItemsPerPage;
+        const endIndex = startIndex + this.statsItemsPerPage;
+        const pageItems = this.statsAllItems.slice(startIndex, endIndex);
+        
+        pageItems.forEach(({ date, stats: dayStats }) => {
             const accuracy = Math.round((dayStats.correct / dayStats.total) * 100);
             
             const item = document.createElement('div');
@@ -2670,19 +2718,47 @@ class KanaApp {
             const n4VocabStats = dayStats.n4vocab || { total: 0, correct: 0 };
             
             item.innerHTML = `
-                <div>
-                    <div class="recent-date">${this.formatDate(date)}</div>
-                    <div class="recent-stats-detail">
-                        平假名: ${dayStats.hiragana.total}题 | 片假名: ${dayStats.katakana.total}题 | N5单词: ${n5VocabStats.total}题 | N4单词: ${n4VocabStats.total}题
-                    </div>
-                </div>
-                <div class="recent-accuracy ${accuracyClass}">
-                    ${accuracy}%
+                <div class="date">${this.formatDate(date)}</div>
+                <div class="stats">
+                    <span>平假名: ${dayStats.hiragana.total}题</span>
+                    <span>片假名: ${dayStats.katakana.total}题</span>
+                    <span>N5单词: ${n5VocabStats.total}题</span>
+                    <span>N4单词: ${n4VocabStats.total}题</span>
+                    <span class="accuracy ${accuracyClass}">正确率: ${accuracy}%</span>
                 </div>
             `;
             
             recentList.appendChild(item);
         });
+        
+        this.updateStatsPagination();
+    }
+    
+    // 统计页面翻页方法
+    updateStatsPagination() {
+        const totalPages = Math.ceil(this.statsAllItems.length / this.statsItemsPerPage);
+        const prevBtn = document.getElementById('stats-prev-btn');
+        const nextBtn = document.getElementById('stats-next-btn');
+        const pageInfo = document.getElementById('stats-page-info');
+        
+        prevBtn.disabled = this.statsCurrentPage <= 1;
+        nextBtn.disabled = this.statsCurrentPage >= totalPages;
+        pageInfo.textContent = `第 ${this.statsCurrentPage} 页，共 ${totalPages} 页`;
+    }
+    
+    prevStatsPage() {
+        if (this.statsCurrentPage > 1) {
+            this.statsCurrentPage--;
+            this.renderStatsPage();
+        }
+    }
+    
+    nextStatsPage() {
+        const totalPages = Math.ceil(this.statsAllItems.length / this.statsItemsPerPage);
+        if (this.statsCurrentPage < totalPages) {
+            this.statsCurrentPage++;
+            this.renderStatsPage();
+        }
     }
 
     getLast7Days() {
