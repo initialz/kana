@@ -150,7 +150,7 @@ body {
     font-size: 14px;
 }
 
-#switch-user {
+#switch-user, #export-data, #import-data {
     margin-left: 10px;
     padding: 6px 12px;
     background: #f0f0f0;
@@ -158,6 +158,29 @@ body {
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
+    transition: background-color 0.3s;
+}
+
+#switch-user:hover, #export-data:hover, #import-data:hover {
+    background: #e0e0e0;
+}
+
+#export-data {
+    background: #4CAF50;
+    color: white;
+}
+
+#export-data:hover {
+    background: #45a049;
+}
+
+#import-data {
+    background: #2196F3;
+    color: white;
+}
+
+#import-data:hover {
+    background: #1976D2;
 }
 
 .mode-buttons {

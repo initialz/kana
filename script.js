@@ -2649,7 +2649,175 @@ class KanaApp {
     }
 }
 
+// 数据导出导入功能
+class DataManager {
+    constructor() {
+        this.initEventListeners();
+    }
+
+    initEventListeners() {
+        document.getElementById('export-data').addEventListener('click', () => this.exportData());
+        document.getElementById('import-data').addEventListener('click', () => this.importData());
+        document.getElementById('import-file').addEventListener('change', (e) => this.handleFileImport(e));
+    }
+
+    exportData() {
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            alert('请先选择一个用户');
+            return;
+        }
+
+        const userData = JSON.parse(localStorage.getItem('kanaLearning') || '{}');
+        const userInfo = userData.users && userData.users[currentUser];
+        
+        if (!userInfo) {
+            alert('当前用户没有学习数据');
+            return;
+        }
+
+        const exportData = {
+            version: "1.0",
+            exportDate: new Date().toISOString(),
+            username: currentUser,
+            data: userInfo
+        };
+
+        const jsonString = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `kana-learning-${currentUser}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert('数据导出成功！');
+    }
+
+    importData() {
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) {
+            alert('请先选择一个用户');
+            return;
+        }
+        
+        document.getElementById('import-file').click();
+    }
+
+    handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importData = JSON.parse(e.target.result);
+                this.processImportData(importData);
+            } catch (error) {
+                alert('文件格式错误，请选择正确的JSON文件');
+                console.error('Import error:', error);
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    processImportData(importData) {
+        // 验证数据格式
+        if (!importData.data || !importData.username) {
+            alert('数据格式不正确');
+            return;
+        }
+
+        const currentUser = localStorage.getItem('currentUser');
+        const userData = JSON.parse(localStorage.getItem('kanaLearning') || '{"users": {}}');
+        
+        if (!userData.users) {
+            userData.users = {};
+        }
+
+        // 询问用户是否要合并数据
+        const shouldMerge = confirm(`是否要将 "${importData.username}" 的数据导入到当前用户 "${currentUser}"？\n\n点击确定：合并数据（保留较高级别）\n点击取消：放弃导入`);
+        
+        if (shouldMerge) {
+            this.mergeUserData(userData.users[currentUser] || {}, importData.data);
+            userData.users[currentUser] = this.mergedData;
+            localStorage.setItem('kanaLearning', JSON.stringify(userData));
+            alert('数据导入成功！页面将刷新以显示最新数据。');
+            location.reload();
+        }
+    }
+
+    mergeUserData(currentData, importData) {
+        this.mergedData = JSON.parse(JSON.stringify(currentData)); // 深拷贝当前数据
+        
+        // 合并平假名和片假名进度
+        ['hiraganaProgress', 'katakanaProgress'].forEach(progressType => {
+            if (!this.mergedData[progressType]) {
+                this.mergedData[progressType] = {};
+            }
+            
+            if (importData[progressType]) {
+                Object.keys(importData[progressType]).forEach(char => {
+                    const importProgress = importData[progressType][char];
+                    const currentProgress = this.mergedData[progressType][char];
+                    
+                    if (!currentProgress || importProgress.level > currentProgress.level) {
+                        // 如果没有当前进度或导入的级别更高，使用导入的数据
+                        this.mergedData[progressType][char] = { ...importProgress };
+                    } else if (importProgress.level === currentProgress.level) {
+                        // 级别相同时，合并统计数据
+                        this.mergedData[progressType][char] = {
+                            ...currentProgress,
+                            totalReviews: (currentProgress.totalReviews || 0) + (importProgress.totalReviews || 0),
+                            correctCount: (currentProgress.correctCount || 0) + (importProgress.correctCount || 0)
+                        };
+                    }
+                });
+            }
+        });
+        
+        // 合并每日统计数据
+        if (!this.mergedData.dailyStats) {
+            this.mergedData.dailyStats = {};
+        }
+        
+        if (importData.dailyStats) {
+            Object.keys(importData.dailyStats).forEach(date => {
+                if (!this.mergedData.dailyStats[date]) {
+                    this.mergedData.dailyStats[date] = { ...importData.dailyStats[date] };
+                } else {
+                    // 合并同一天的数据
+                    const current = this.mergedData.dailyStats[date];
+                    const imported = importData.dailyStats[date];
+                    
+                    current.total = (current.total || 0) + (imported.total || 0);
+                    current.correct = (current.correct || 0) + (imported.correct || 0);
+                    
+                    ['hiragana', 'katakana'].forEach(type => {
+                        if (!current[type]) current[type] = {};
+                        if (imported[type]) {
+                            Object.keys(imported[type]).forEach(char => {
+                                if (!current[type][char]) {
+                                    current[type][char] = { ...imported[type][char] };
+                                } else {
+                                    current[type][char].total = (current[type][char].total || 0) + (imported[type][char].total || 0);
+                                    current[type][char].correct = (current[type][char].correct || 0) + (imported[type][char].correct || 0);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+    }
+}
+
 // 启动应用
 document.addEventListener('DOMContentLoaded', () => {
     new KanaApp();
+    new DataManager();
 });
