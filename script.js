@@ -2670,7 +2670,7 @@ class DataManager {
             return;
         }
 
-        const userInfo = userData.users && userData.users[currentUserName];
+        const userInfo = data.users && data.users[currentUserName];
         
         if (!userInfo) {
             alert('当前用户没有学习数据');
