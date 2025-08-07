@@ -1434,7 +1434,7 @@ class KanaApp {
             
             const deleteButton = document.createElement('button');
             deleteButton.className = 'user-delete-btn';
-            deleteButton.innerHTML = '×';
+            deleteButton.innerHTML = '🗑️';
             deleteButton.title = `删除用户 ${user}`;
             deleteButton.addEventListener('click', (e) => {
                 e.stopPropagation();
