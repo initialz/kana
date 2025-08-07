@@ -2662,14 +2662,15 @@ class DataManager {
     }
 
     exportData() {
-        const currentUser = localStorage.getItem('currentUser');
-        if (!currentUser) {
+        const data = JSON.parse(localStorage.getItem('kanaMemoryData') || '{}');
+        const currentUserName = data.currentUser;
+        
+        if (!currentUserName) {
             alert('请先选择一个用户');
             return;
         }
 
-        const userData = JSON.parse(localStorage.getItem('kanaLearning') || '{}');
-        const userInfo = userData.users && userData.users[currentUser];
+        const userInfo = userData.users && userData.users[currentUserName];
         
         if (!userInfo) {
             alert('当前用户没有学习数据');
@@ -2679,7 +2680,7 @@ class DataManager {
         const exportData = {
             version: "1.0",
             exportDate: new Date().toISOString(),
-            username: currentUser,
+            username: currentUserName,
             data: userInfo
         };
 
@@ -2689,7 +2690,7 @@ class DataManager {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `kana-learning-${currentUser}-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `kana-learning-${currentUserName}-${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -2699,8 +2700,10 @@ class DataManager {
     }
 
     importData() {
-        const currentUser = localStorage.getItem('currentUser');
-        if (!currentUser) {
+        const data = JSON.parse(localStorage.getItem('kanaMemoryData') || '{}');
+        const currentUserName = data.currentUser;
+        
+        if (!currentUserName) {
             alert('请先选择一个用户');
             return;
         }
@@ -2732,20 +2735,20 @@ class DataManager {
             return;
         }
 
-        const currentUser = localStorage.getItem('currentUser');
-        const userData = JSON.parse(localStorage.getItem('kanaLearning') || '{"users": {}}');
+        const userData = JSON.parse(localStorage.getItem('kanaMemoryData') || '{"users": {}}');
+        const currentUserName = userData.currentUser;
         
         if (!userData.users) {
             userData.users = {};
         }
 
         // 询问用户是否要合并数据
-        const shouldMerge = confirm(`是否要将 "${importData.username}" 的数据导入到当前用户 "${currentUser}"？\n\n点击确定：合并数据（保留较高级别）\n点击取消：放弃导入`);
+        const shouldMerge = confirm(`是否要将 "${importData.username}" 的数据导入到当前用户 "${currentUserName}"？\n\n点击确定：合并数据（保留较高级别）\n点击取消：放弃导入`);
         
         if (shouldMerge) {
-            this.mergeUserData(userData.users[currentUser] || {}, importData.data);
-            userData.users[currentUser] = this.mergedData;
-            localStorage.setItem('kanaLearning', JSON.stringify(userData));
+            this.mergeUserData(userData.users[currentUserName] || {}, importData.data);
+            userData.users[currentUserName] = this.mergedData;
+            localStorage.setItem('kanaMemoryData', JSON.stringify(userData));
             alert('数据导入成功！页面将刷新以显示最新数据。');
             location.reload();
         }
