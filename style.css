@@ -945,8 +945,6 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .recent-item {
@@ -1031,8 +1029,6 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--space-3);
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .kana-item {
@@ -1089,57 +1085,55 @@ body {
     color: var(--primary-700);
 }
 
-/* 翻页组件样式 */
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-6);
-    padding: var(--space-4);
-    background: var(--gray-50);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--gray-200);
+/* 无限滚动样式 */
+.recent-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
 }
 
-.pagination-btn {
-    padding: var(--space-2) var(--space-3);
-    background: white;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-md);
+.kana-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+/* 加载指示器样式 */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-6);
+    color: var(--gray-500);
     font-size: 0.875rem;
     font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: inherit;
-    color: var(--gray-700);
-    min-width: 36px;
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--gray-200);
+    border-top: 2px solid var(--primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.no-more-indicator {
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.pagination-btn:hover:not(:disabled) {
-    background: var(--primary-50);
-    border-color: var(--primary-200);
-    color: var(--primary-700);
-}
-
-.pagination-btn.active {
-    background: var(--primary-500);
-    border-color: var(--primary-500);
-    color: white;
-}
-
-.pagination-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.pagination-info {
+    padding: var(--space-6);
+    color: var(--gray-400);
     font-size: 0.875rem;
-    color: var(--gray-600);
-    margin: 0 var(--space-3);
+    font-style: italic;
+    border-top: 1px solid var(--gray-200);
+    margin-top: var(--space-4);
 }
 
 /* 图表容器和图例 */

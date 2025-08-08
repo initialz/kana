@@ -253,10 +253,12 @@
                         </div>
                     </div>
                     <div id="kana-detail-list" class="kana-list"></div>
-                    <div class="pagination" id="detail-pagination">
-                        <button class="pagination-btn" id="detail-prev-btn" disabled>‹</button>
-                        <span class="pagination-info" id="detail-page-info">第 1 页，共 1 页</span>
-                        <button class="pagination-btn" id="detail-next-btn" disabled>›</button>
+                    <div id="detail-loading" class="loading-indicator hidden">
+                        <div class="loading-spinner"></div>
+                        <span>加载更多...</span>
+                    </div>
+                    <div id="detail-no-more" class="no-more-indicator hidden">
+                        <span>没有更多假名了</span>
                     </div>
                 </div>
             </div>
@@ -344,10 +346,12 @@
                     <div class="chart-card">
                         <h3>最近练习记录</h3>
                         <div id="recent-stats" class="recent-list"></div>
-                        <div class="pagination" id="stats-pagination">
-                            <button class="pagination-btn" id="stats-prev-btn" disabled>‹</button>
-                            <span class="pagination-info" id="stats-page-info">第 1 页，共 1 页</span>
-                            <button class="pagination-btn" id="stats-next-btn" disabled>›</button>
+                        <div id="stats-loading" class="loading-indicator hidden">
+                            <div class="loading-spinner"></div>
+                            <span>加载更多...</span>
+                        </div>
+                        <div id="stats-no-more" class="no-more-indicator hidden">
+                            <span>没有更多记录了</span>
                         </div>
                     </div>
                 </div>
