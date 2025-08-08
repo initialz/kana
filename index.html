@@ -38,27 +38,69 @@
                     <input type="file" id="import-file" accept=".json" style="display: none;">
                 </div>
             </div>
-            <div class="mode-buttons">
-                <button id="hiragana-mode" class="mode-btn">
-                    <h3>平假名练习</h3>
-                    <p>练习平假名的罗马音读音</p>
-                </button>
-                <button id="katakana-mode" class="mode-btn">
-                    <h3>片假名练习</h3>
-                    <p>练习片假名的罗马音读音</p>
-                </button>
-                <button id="n5-vocab-mode" class="mode-btn">
-                    <h3>N5背单词</h3>
-                    <p>学习日语N5级别单词</p>
-                </button>
-                <button id="n4-vocab-mode" class="mode-btn">
-                    <h3>N4背单词</h3>
-                    <p>学习日语N4级别单词</p>
-                </button>
-                <button id="stats-mode" class="mode-btn">
-                    <h3>学习统计</h3>
-                    <p>查看学习进度和趋势</p>
-                </button>
+            <div class="mode-grid">
+                <!-- 背假名模块 -->
+                <div class="feature-section">
+                    <h3 class="section-title">背假名</h3>
+                    <div class="mode-buttons">
+                        <button id="hiragana-mode" class="mode-btn">
+                            <div class="mode-icon">あ</div>
+                            <h4>平假名练习</h4>
+                            <p>练习平假名的罗马音读音</p>
+                        </button>
+                        <button id="katakana-mode" class="mode-btn">
+                            <div class="mode-icon">ア</div>
+                            <h4>片假名练习</h4>
+                            <p>练习片假名的罗马音读音</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 背单词模块 -->
+                <div class="feature-section">
+                    <h3 class="section-title">背单词</h3>
+                    <div class="mode-buttons">
+                        <button id="n5-vocab-mode" class="mode-btn">
+                            <div class="mode-icon">N5</div>
+                            <h4>N5背单词</h4>
+                            <p>学习日语N5级别单词</p>
+                        </button>
+                        <button id="n4-vocab-mode" class="mode-btn">
+                            <div class="mode-icon">N4</div>
+                            <h4>N4背单词</h4>
+                            <p>学习日语N4级别单词</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 每日打卡模块 -->
+                <div class="feature-section">
+                    <h3 class="section-title">每日打卡</h3>
+                    <div class="mode-buttons">
+                        <button id="kana-checkin-mode" class="mode-btn">
+                            <div class="mode-icon">✓</div>
+                            <h4>假名打卡</h4>
+                            <p>20道平假名片假名混合测试</p>
+                        </button>
+                        <button id="vocab-checkin-mode" class="mode-btn">
+                            <div class="mode-icon">📝</div>
+                            <h4>单词打卡</h4>
+                            <p>N5/N4单词智能测试</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 学习统计模块 -->
+                <div class="feature-section">
+                    <h3 class="section-title">学习统计</h3>
+                    <div class="mode-buttons">
+                        <button id="stats-mode" class="mode-btn stats-btn">
+                            <div class="mode-icon">📊</div>
+                            <h4>学习统计</h4>
+                            <p>查看学习进度和趋势</p>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="stats">
                 <div class="stat-item">
@@ -355,6 +397,110 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- 假名打卡界面 -->
+        <div id="kana-checkin-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-kana-checkin">返回</button>
+                <h2>假名每日打卡</h2>
+                <div class="checkin-info">
+                    <span>连续打卡: <span id="kana-checkin-streak">0</span>天</span>
+                    <span>今日进度: <span id="kana-checkin-progress">0/20</span></span>
+                </div>
+            </div>
+            
+            <div class="checkin-practice-area">
+                <div class="question-display">
+                    <div class="question-type" id="kana-question-type">平假名</div>
+                    <div class="question-char" id="kana-question-char">あ</div>
+                    <div class="question-number">第 <span id="kana-current-question">1</span> / 20 题</div>
+                </div>
+                
+                <div class="answer-area">
+                    <input type="text" id="kana-answer-input" placeholder="输入罗马音读音" autocomplete="off">
+                    <button id="kana-submit-answer">提交</button>
+                </div>
+                
+                <div id="kana-result" class="result-display hidden">
+                    <div class="result-text"></div>
+                    <div class="correct-answer"></div>
+                    <button id="kana-next-question">下一题</button>
+                </div>
+            </div>
+
+            <div id="kana-checkin-complete" class="checkin-complete hidden">
+                <h3>今日假名打卡完成！</h3>
+                <div class="checkin-results">
+                    <div class="result-stat">
+                        <span>正确率：</span>
+                        <span id="kana-final-accuracy">0%</span>
+                    </div>
+                    <div class="result-stat">
+                        <span>正确题数：</span>
+                        <span id="kana-final-correct">0/20</span>
+                    </div>
+                    <div class="result-stat">
+                        <span>连续打卡：</span>
+                        <span id="kana-final-streak">0天</span>
+                    </div>
+                </div>
+                <button id="kana-checkin-restart">再来一次</button>
+            </div>
+        </div>
+
+        <!-- 单词打卡界面 -->
+        <div id="vocab-checkin-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-vocab-checkin">返回</button>
+                <h2>单词每日打卡</h2>
+                <div class="checkin-info">
+                    <div class="level-selector">
+                        <button id="vocab-checkin-n5" class="level-btn active">N5</button>
+                        <button id="vocab-checkin-n4" class="level-btn">N4</button>
+                    </div>
+                    <span>连续打卡: <span id="vocab-checkin-streak">0</span>天</span>
+                    <span>今日进度: <span id="vocab-checkin-progress">0/20</span></span>
+                </div>
+            </div>
+            
+            <div class="checkin-practice-area">
+                <div class="question-display">
+                    <div class="question-level" id="vocab-question-level">N5</div>
+                    <div class="question-word" id="vocab-question-word">がっこう</div>
+                    <div class="question-number">第 <span id="vocab-current-question">1</span> / 20 题</div>
+                </div>
+                
+                <div class="answer-area">
+                    <input type="text" id="vocab-answer-input" placeholder="输入中文意思" autocomplete="off">
+                    <button id="vocab-submit-answer">提交</button>
+                </div>
+                
+                <div id="vocab-result" class="result-display hidden">
+                    <div class="result-text"></div>
+                    <div class="correct-answer"></div>
+                    <button id="vocab-next-question">下一题</button>
+                </div>
+            </div>
+
+            <div id="vocab-checkin-complete" class="checkin-complete hidden">
+                <h3>今日单词打卡完成！</h3>
+                <div class="checkin-results">
+                    <div class="result-stat">
+                        <span>正确率：</span>
+                        <span id="vocab-final-accuracy">0%</span>
+                    </div>
+                    <div class="result-stat">
+                        <span>正确题数：</span>
+                        <span id="vocab-final-correct">0/20</span>
+                    </div>
+                    <div class="result-stat">
+                        <span>连续打卡：</span>
+                        <span id="vocab-final-streak">0天</span>
+                    </div>
+                </div>
+                <button id="vocab-checkin-restart">再来一次</button>
             </div>
         </div>
     </div>
