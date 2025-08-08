@@ -1272,6 +1272,14 @@ class KanaApp {
         this.detailAllItems = [];
         this.detailLoading = false;
         
+        // 打卡功能相关属性
+        this.kanaCheckinQuestions = [];
+        this.vocabCheckinQuestions = [];
+        this.currentCheckinQuestion = 0;
+        this.checkinCorrectCount = 0;
+        this.checkinMode = null; // 'kana' or 'vocab'
+        this.vocabCheckinLevel = 'N5'; // 'N5' or 'N4'
+        
         this.initializeApp();
     }
 
@@ -1298,6 +1306,10 @@ class KanaApp {
         document.getElementById('n5-vocab-mode').addEventListener('click', () => this.startVocabPractice());
         document.getElementById('n4-vocab-mode').addEventListener('click', () => this.startN4VocabPractice());
         document.getElementById('stats-mode').addEventListener('click', () => this.showStats());
+        
+        // 每日打卡事件
+        document.getElementById('kana-checkin-mode').addEventListener('click', () => this.startKanaCheckin());
+        document.getElementById('vocab-checkin-mode').addEventListener('click', () => this.startVocabCheckin());
         
         // 练习事件
         document.getElementById('back-to-modes').addEventListener('click', () => this.showModeSelection());
@@ -1352,6 +1364,32 @@ class KanaApp {
             checkbox.addEventListener('change', () => this.updateAccuracyChart());
         });
         
+        // 打卡功能事件
+        document.getElementById('back-to-modes-from-kana-checkin').addEventListener('click', () => this.showModeSelection());
+        document.getElementById('back-to-modes-from-vocab-checkin').addEventListener('click', () => this.showModeSelection());
+        document.getElementById('kana-submit-answer').addEventListener('click', () => this.submitKanaCheckinAnswer());
+        document.getElementById('vocab-submit-answer').addEventListener('click', () => this.submitVocabCheckinAnswer());
+        document.getElementById('kana-next-question').addEventListener('click', () => this.nextKanaCheckinQuestion());
+        document.getElementById('vocab-next-question').addEventListener('click', () => this.nextVocabCheckinQuestion());
+        document.getElementById('kana-checkin-restart').addEventListener('click', () => this.restartKanaCheckin());
+        document.getElementById('vocab-checkin-restart').addEventListener('click', () => this.restartVocabCheckin());
+        
+        // 单词打卡级别切换事件
+        document.getElementById('vocab-checkin-n5').addEventListener('click', () => this.switchVocabCheckinLevel('N5'));
+        document.getElementById('vocab-checkin-n4').addEventListener('click', () => this.switchVocabCheckinLevel('N4'));
+        
+        // 打卡页面回车事件
+        document.getElementById('kana-answer-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('kana-answer-input').disabled) {
+                this.submitKanaCheckinAnswer();
+            }
+        });
+        document.getElementById('vocab-answer-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('vocab-answer-input').disabled) {
+                this.submitVocabCheckinAnswer();
+            }
+        });
+
         // 无限滚动事件
         this.setupInfiniteScroll();
         
@@ -1526,9 +1564,28 @@ class KanaApp {
         document.getElementById('n4-vocab-practice-screen').classList.add('hidden');
         document.getElementById('stats-screen').classList.add('hidden');
         document.getElementById('progress-detail-screen').classList.add('hidden');
+        document.getElementById('kana-checkin-screen').classList.add('hidden');
+        document.getElementById('vocab-checkin-screen').classList.add('hidden');
         
         document.getElementById('current-user').textContent = currentUser;
         this.updateProgressDisplay();
+    }
+
+    showScreen(screenId) {
+        // 隐藏所有屏幕
+        const screens = [
+            'user-selection', 'mode-selection', 'practice-screen', 
+            'vocab-practice-screen', 'n4-vocab-practice-screen',
+            'stats-screen', 'progress-detail-screen',
+            'kana-checkin-screen', 'vocab-checkin-screen'
+        ];
+        
+        screens.forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+        });
+        
+        // 显示目标屏幕
+        document.getElementById(screenId).classList.remove('hidden');
     }
 
     updateProgressDisplay() {
@@ -2814,6 +2871,387 @@ class KanaApp {
     formatDateShort(dateStr) {
         const date = new Date(dateStr);
         return `${date.getMonth() + 1}/${date.getDate()}`;
+    }
+
+    // ==================== 每日打卡功能 ====================
+    
+    startKanaCheckin() {
+        this.checkinMode = 'kana';
+        this.generateKanaCheckinQuestions();
+        this.currentCheckinQuestion = 0;
+        this.checkinCorrectCount = 0;
+        
+        this.showScreen('kana-checkin-screen');
+        this.updateKanaCheckinStreak();
+        this.showKanaCheckinQuestion();
+    }
+    
+    startVocabCheckin() {
+        this.checkinMode = 'vocab';
+        this.vocabCheckinLevel = 'N5'; // 默认N5
+        this.generateVocabCheckinQuestions();
+        this.currentCheckinQuestion = 0;
+        this.checkinCorrectCount = 0;
+        
+        this.showScreen('vocab-checkin-screen');
+        this.updateVocabCheckinStreak();
+        this.showVocabCheckinQuestion();
+    }
+    
+    generateKanaCheckinQuestions() {
+        // 获取用户的学习数据
+        const userData = this.memorySystem.getUserData(this.userManager.getCurrentUser());
+        const hiraganaProgress = userData.hiraganaProgress || {};
+        const katakanaProgress = userData.katakanaProgress || {};
+        
+        // 合并所有假名数据
+        const allKana = [...KANA_DATA.hiragana, ...KANA_DATA.katakana];
+        
+        // 根据错误率和记忆模型选择题目
+        const candidates = allKana.map(kana => {
+            const isHiragana = KANA_DATA.hiragana.includes(kana);
+            const progress = isHiragana ? hiraganaProgress : katakanaProgress;
+            const charProgress = progress[kana.char] || { level: 0, totalReviews: 0, correctCount: 0 };
+            
+            // 计算错误率（总是至少5%错误率避免除零）
+            const errorRate = charProgress.totalReviews > 0 ? 
+                1 - (charProgress.correctCount / charProgress.totalReviews) : 0.5;
+            
+            // 计算优先级：错误率高 + 复习间隔到期 = 高优先级
+            const daysSinceLastReview = charProgress.nextReview ? 
+                Math.max(0, (Date.now() - charProgress.nextReview) / (1000 * 60 * 60 * 24)) : 999;
+            
+            const priority = errorRate * 10 + Math.min(daysSinceLastReview, 10);
+            
+            return {
+                ...kana,
+                type: isHiragana ? '平假名' : '片假名',
+                priority,
+                errorRate
+            };
+        });
+        
+        // 按优先级排序，取前20个，然后随机打乱
+        candidates.sort((a, b) => b.priority - a.priority);
+        const selected = candidates.slice(0, 20);
+        
+        // 随机打乱顺序
+        this.kanaCheckinQuestions = this.shuffleArray(selected);
+    }
+    
+    generateVocabCheckinQuestions() {
+        const vocabData = this.vocabCheckinLevel === 'N5' ? N5_WORDS : N4_WORDS;
+        const userData = this.memorySystem.getUserData(this.userManager.getCurrentUser());
+        const progressKey = this.vocabCheckinLevel === 'N5' ? 'n5vocabProgress' : 'n4vocabProgress';
+        const vocabProgress = userData[progressKey] || {};
+        
+        // 根据错误率和记忆模型选择题目
+        const candidates = vocabData.map(word => {
+            const wordKey = this.vocabCheckinLevel === 'N5' ? word.kanji : word.kana;
+            const wordProgress = vocabProgress[wordKey] || { level: 0, totalReviews: 0, correctCount: 0 };
+            
+            const errorRate = wordProgress.totalReviews > 0 ? 
+                1 - (wordProgress.correctCount / wordProgress.totalReviews) : 0.5;
+            
+            const daysSinceLastReview = wordProgress.nextReview ? 
+                Math.max(0, (Date.now() - wordProgress.nextReview) / (1000 * 60 * 60 * 24)) : 999;
+            
+            const priority = errorRate * 10 + Math.min(daysSinceLastReview, 10);
+            
+            return {
+                ...word,
+                priority,
+                errorRate
+            };
+        });
+        
+        candidates.sort((a, b) => b.priority - a.priority);
+        const selected = candidates.slice(0, 20);
+        
+        this.vocabCheckinQuestions = this.shuffleArray(selected);
+    }
+    
+    shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+    
+    showKanaCheckinQuestion() {
+        if (this.currentCheckinQuestion >= this.kanaCheckinQuestions.length) {
+            this.completeKanaCheckin();
+            return;
+        }
+        
+        const question = this.kanaCheckinQuestions[this.currentCheckinQuestion];
+        
+        document.getElementById('kana-question-type').textContent = question.type;
+        document.getElementById('kana-question-char').textContent = question.char;
+        document.getElementById('kana-current-question').textContent = this.currentCheckinQuestion + 1;
+        document.getElementById('kana-checkin-progress').textContent = `${this.currentCheckinQuestion}/20`;
+        
+        // 重置输入和结果显示
+        document.getElementById('kana-answer-input').value = '';
+        document.getElementById('kana-answer-input').disabled = false;
+        document.getElementById('kana-submit-answer').disabled = false;
+        document.getElementById('kana-result').classList.add('hidden');
+    }
+    
+    showVocabCheckinQuestion() {
+        if (this.currentCheckinQuestion >= this.vocabCheckinQuestions.length) {
+            this.completeVocabCheckin();
+            return;
+        }
+        
+        const question = this.vocabCheckinQuestions[this.currentCheckinQuestion];
+        
+        document.getElementById('vocab-question-level').textContent = this.vocabCheckinLevel;
+        document.getElementById('vocab-question-word').textContent = question.kana;
+        document.getElementById('vocab-current-question').textContent = this.currentCheckinQuestion + 1;
+        document.getElementById('vocab-checkin-progress').textContent = `${this.currentCheckinQuestion}/20`;
+        
+        // 重置输入和结果显示
+        document.getElementById('vocab-answer-input').value = '';
+        document.getElementById('vocab-answer-input').disabled = false;
+        document.getElementById('vocab-submit-answer').disabled = false;
+        document.getElementById('vocab-result').classList.add('hidden');
+    }
+    
+    submitKanaCheckinAnswer() {
+        const input = document.getElementById('kana-answer-input');
+        const userAnswer = input.value.trim().toLowerCase();
+        const question = this.kanaCheckinQuestions[this.currentCheckinQuestion];
+        const correctAnswer = question.romaji.toLowerCase();
+        
+        input.disabled = true;
+        document.getElementById('kana-submit-answer').disabled = true;
+        
+        const isCorrect = userAnswer === correctAnswer;
+        if (isCorrect) {
+            this.checkinCorrectCount++;
+        }
+        
+        // 显示结果
+        this.showKanaCheckinResult(isCorrect, correctAnswer, question.example);
+        
+        // 更新学习数据
+        this.updateKanaProgress(question, isCorrect);
+    }
+    
+    submitVocabCheckinAnswer() {
+        const input = document.getElementById('vocab-answer-input');
+        const userAnswer = input.value.trim();
+        const question = this.vocabCheckinQuestions[this.currentCheckinQuestion];
+        const correctAnswers = question.meaning.split('、').map(m => m.trim());
+        
+        input.disabled = true;
+        document.getElementById('vocab-submit-answer').disabled = true;
+        
+        const isCorrect = correctAnswers.some(answer => 
+            userAnswer.includes(answer) || answer.includes(userAnswer)
+        );
+        
+        if (isCorrect) {
+            this.checkinCorrectCount++;
+        }
+        
+        // 显示结果
+        this.showVocabCheckinResult(isCorrect, question.meaning, question.kanji);
+        
+        // 更新学习数据
+        this.updateVocabProgress(question, isCorrect);
+    }
+    
+    showKanaCheckinResult(isCorrect, correctAnswer, example) {
+        const resultEl = document.getElementById('kana-result');
+        const resultTextEl = resultEl.querySelector('.result-text');
+        const correctAnswerEl = resultEl.querySelector('.correct-answer');
+        
+        resultEl.className = `result-display ${isCorrect ? 'correct' : 'wrong'}`;
+        resultTextEl.textContent = isCorrect ? '正确！' : '错误';
+        correctAnswerEl.textContent = isCorrect ? 
+            `很棒！例词：${example}` : 
+            `正确答案：${correctAnswer} (例词：${example})`;
+        
+        resultEl.classList.remove('hidden');
+    }
+    
+    showVocabCheckinResult(isCorrect, correctMeaning, kanji) {
+        const resultEl = document.getElementById('vocab-result');
+        const resultTextEl = resultEl.querySelector('.result-text');
+        const correctAnswerEl = resultEl.querySelector('.correct-answer');
+        
+        resultEl.className = `result-display ${isCorrect ? 'correct' : 'wrong'}`;
+        resultTextEl.textContent = isCorrect ? '正确！' : '错误';
+        correctAnswerEl.textContent = isCorrect ? 
+            `很棒！汉字：${kanji}` : 
+            `正确答案：${correctMeaning}（汉字：${kanji}）`;
+        
+        resultEl.classList.remove('hidden');
+    }
+    
+    nextKanaCheckinQuestion() {
+        this.currentCheckinQuestion++;
+        this.showKanaCheckinQuestion();
+    }
+    
+    nextVocabCheckinQuestion() {
+        this.currentCheckinQuestion++;
+        this.showVocabCheckinQuestion();
+    }
+    
+    completeKanaCheckin() {
+        // 隐藏练习区域，显示完成界面
+        document.querySelector('#kana-checkin-screen .checkin-practice-area').style.display = 'none';
+        document.getElementById('kana-checkin-complete').classList.remove('hidden');
+        
+        const accuracy = Math.round((this.checkinCorrectCount / 20) * 100);
+        
+        document.getElementById('kana-final-accuracy').textContent = accuracy + '%';
+        document.getElementById('kana-final-correct').textContent = `${this.checkinCorrectCount}/20`;
+        
+        // 更新打卡记录
+        this.updateCheckinRecord('kana', accuracy);
+        
+        // 显示连续打卡天数
+        const streak = this.getCheckinStreak('kana');
+        document.getElementById('kana-final-streak').textContent = streak + '天';
+    }
+    
+    completeVocabCheckin() {
+        // 隐藏练习区域，显示完成界面
+        document.querySelector('#vocab-checkin-screen .checkin-practice-area').style.display = 'none';
+        document.getElementById('vocab-checkin-complete').classList.remove('hidden');
+        
+        const accuracy = Math.round((this.checkinCorrectCount / 20) * 100);
+        
+        document.getElementById('vocab-final-accuracy').textContent = accuracy + '%';
+        document.getElementById('vocab-final-correct').textContent = `${this.checkinCorrectCount}/20`;
+        
+        // 更新打卡记录
+        this.updateCheckinRecord(`vocab_${this.vocabCheckinLevel.toLowerCase()}`, accuracy);
+        
+        // 显示连续打卡天数
+        const streak = this.getCheckinStreak(`vocab_${this.vocabCheckinLevel.toLowerCase()}`);
+        document.getElementById('vocab-final-streak').textContent = streak + '天';
+    }
+    
+    restartKanaCheckin() {
+        // 重置界面状态
+        document.querySelector('#kana-checkin-screen .checkin-practice-area').style.display = 'block';
+        document.getElementById('kana-checkin-complete').classList.add('hidden');
+        
+        // 重新开始
+        this.startKanaCheckin();
+    }
+    
+    restartVocabCheckin() {
+        // 重置界面状态
+        document.querySelector('#vocab-checkin-screen .checkin-practice-area').style.display = 'block';
+        document.getElementById('vocab-checkin-complete').classList.add('hidden');
+        
+        // 重新开始
+        this.startVocabCheckin();
+    }
+    
+    switchVocabCheckinLevel(level) {
+        this.vocabCheckinLevel = level;
+        
+        // 更新按钮状态
+        document.getElementById('vocab-checkin-n5').classList.toggle('active', level === 'N5');
+        document.getElementById('vocab-checkin-n4').classList.toggle('active', level === 'N4');
+        
+        // 重新生成题目
+        this.generateVocabCheckinQuestions();
+        this.currentCheckinQuestion = 0;
+        this.checkinCorrectCount = 0;
+        
+        // 更新连续打卡显示
+        this.updateVocabCheckinStreak();
+        
+        // 显示第一题
+        this.showVocabCheckinQuestion();
+    }
+    
+    updateKanaProgress(question, isCorrect) {
+        const isHiragana = KANA_DATA.hiragana.some(k => k.char === question.char);
+        const type = isHiragana ? 'hiragana' : 'katakana';
+        
+        // 更新记忆系统数据
+        this.memorySystem.updateProgress(
+            this.userManager.getCurrentUser(),
+            type,
+            question.char,
+            isCorrect
+        );
+    }
+    
+    updateVocabProgress(question, isCorrect) {
+        const type = this.vocabCheckinLevel === 'N5' ? 'n5vocab' : 'n4vocab';
+        const wordKey = this.vocabCheckinLevel === 'N5' ? question.kanji : question.kana;
+        
+        // 更新记忆系统数据
+        this.memorySystem.updateProgress(
+            this.userManager.getCurrentUser(),
+            type,
+            wordKey,
+            isCorrect
+        );
+    }
+    
+    updateCheckinRecord(type, accuracy) {
+        const today = new Date().toISOString().split('T')[0];
+        const userData = this.memorySystem.getUserData(this.userManager.getCurrentUser());
+        
+        if (!userData.checkinRecords) {
+            userData.checkinRecords = {};
+        }
+        
+        if (!userData.checkinRecords[today]) {
+            userData.checkinRecords[today] = {};
+        }
+        
+        userData.checkinRecords[today][type] = {
+            completed: true,
+            accuracy: accuracy,
+            timestamp: Date.now()
+        };
+        
+        this.memorySystem.saveUserData(this.userManager.getCurrentUser(), userData);
+    }
+    
+    getCheckinStreak(type) {
+        const userData = this.memorySystem.getUserData(this.userManager.getCurrentUser());
+        const records = userData.checkinRecords || {};
+        
+        let streak = 0;
+        let currentDate = new Date();
+        
+        while (true) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            
+            if (records[dateStr] && records[dateStr][type] && records[dateStr][type].completed) {
+                streak++;
+                currentDate.setDate(currentDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    }
+    
+    updateKanaCheckinStreak() {
+        const streak = this.getCheckinStreak('kana');
+        document.getElementById('kana-checkin-streak').textContent = streak;
+    }
+    
+    updateVocabCheckinStreak() {
+        const streak = this.getCheckinStreak(`vocab_${this.vocabCheckinLevel.toLowerCase()}`);
+        document.getElementById('vocab-checkin-streak').textContent = streak;
     }
 }
 
