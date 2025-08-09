@@ -1309,7 +1309,7 @@ class KanaApp {
         
         // 每日打卡事件
         document.getElementById('kana-checkin-mode').addEventListener('click', () => this.startKanaCheckin());
-        document.getElementById('vocab-checkin-mode').addEventListener('click', () => this.startVocabCheckin());
+        document.getElementById('vocab-checkin-mode').addEventListener('click', () => this.showVocabCheckinLevelSelection());
         
         // 练习事件
         document.getElementById('back-to-modes').addEventListener('click', () => this.showModeSelection());
@@ -1366,17 +1366,21 @@ class KanaApp {
         
         // 打卡功能事件
         document.getElementById('back-to-modes-from-kana-checkin').addEventListener('click', () => this.showModeSelection());
-        document.getElementById('back-to-modes-from-vocab-checkin').addEventListener('click', () => this.showModeSelection());
+        document.getElementById('back-to-modes-from-vocab-level').addEventListener('click', () => this.showModeSelection());
+        document.getElementById('back-to-modes-from-vocab-checkin').addEventListener('click', () => this.showScreen('vocab-checkin-level-screen'));
         document.getElementById('kana-submit-answer').addEventListener('click', () => this.submitKanaCheckinAnswer());
-        document.getElementById('vocab-submit-answer').addEventListener('click', () => this.submitVocabCheckinAnswer());
+        document.getElementById('vocab-choice-0').addEventListener('click', () => this.submitVocabCheckinChoice(0));
+        document.getElementById('vocab-choice-1').addEventListener('click', () => this.submitVocabCheckinChoice(1));
+        document.getElementById('vocab-choice-2').addEventListener('click', () => this.submitVocabCheckinChoice(2));
+        document.getElementById('vocab-choice-3').addEventListener('click', () => this.submitVocabCheckinChoice(3));
         document.getElementById('kana-next-question').addEventListener('click', () => this.nextKanaCheckinQuestion());
-        document.getElementById('vocab-next-question').addEventListener('click', () => this.nextVocabCheckinQuestion());
+        document.getElementById('vocab-checkin-next-question').addEventListener('click', () => this.nextVocabCheckinQuestion());
         document.getElementById('kana-checkin-restart').addEventListener('click', () => this.restartKanaCheckin());
         document.getElementById('vocab-checkin-restart').addEventListener('click', () => this.restartVocabCheckin());
         
-        // 单词打卡级别切换事件
-        document.getElementById('vocab-checkin-n5').addEventListener('click', () => this.switchVocabCheckinLevel('N5'));
-        document.getElementById('vocab-checkin-n4').addEventListener('click', () => this.switchVocabCheckinLevel('N4'));
+        // 单词打卡级别选择事件
+        document.getElementById('select-n5-vocab').addEventListener('click', () => this.startVocabCheckinWithLevel('N5'));
+        document.getElementById('select-n4-vocab').addEventListener('click', () => this.startVocabCheckinWithLevel('N4'));
         
         // 打卡页面回车事件
         document.getElementById('kana-answer-input').addEventListener('keypress', (e) => {
@@ -1384,9 +1388,21 @@ class KanaApp {
                 this.submitKanaCheckinAnswer();
             }
         });
-        document.getElementById('vocab-answer-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !document.getElementById('vocab-answer-input').disabled) {
-                this.submitVocabCheckinAnswer();
+        // 单词打卡键盘快捷键 (1-4选择答案)
+        document.addEventListener('keydown', (e) => {
+            if (this.checkinMode === 'vocab' && document.getElementById('vocab-checkin-screen').classList.contains('screen') && !document.getElementById('vocab-checkin-screen').classList.contains('hidden')) {
+                if (e.key >= '1' && e.key <= '4') {
+                    const choiceIndex = parseInt(e.key) - 1;
+                    const btn = document.getElementById(`vocab-choice-${choiceIndex}`);
+                    if (btn && !btn.disabled) {
+                        this.submitVocabCheckinChoice(choiceIndex);
+                    }
+                } else if (e.key === 'Enter') {
+                    const nextBtn = document.getElementById('vocab-checkin-next-question');
+                    if (nextBtn && !nextBtn.classList.contains('hidden') && !document.getElementById('vocab-checkin-feedback').classList.contains('hidden')) {
+                        this.nextVocabCheckinQuestion();
+                    }
+                }
             }
         });
 
@@ -2886,6 +2902,22 @@ class KanaApp {
         this.showKanaCheckinQuestion();
     }
     
+    showVocabCheckinLevelSelection() {
+        this.showScreen('vocab-checkin-level-screen');
+    }
+    
+    startVocabCheckinWithLevel(level) {
+        this.checkinMode = 'vocab';
+        this.vocabCheckinLevel = level;
+        this.generateVocabCheckinQuestions();
+        this.currentCheckinQuestion = 0;
+        this.checkinCorrectCount = 0;
+        
+        this.showScreen('vocab-checkin-screen');
+        this.updateVocabCheckinStreak();
+        this.showVocabCheckinQuestion();
+    }
+    
     startVocabCheckin() {
         this.checkinMode = 'vocab';
         this.vocabCheckinLevel = 'N5'; // 默认N5
@@ -3013,11 +3045,17 @@ class KanaApp {
         document.getElementById('vocab-current-question').textContent = this.currentCheckinQuestion + 1;
         document.getElementById('vocab-checkin-progress').textContent = `${this.currentCheckinQuestion}/20`;
         
-        // 重置输入和结果显示
-        document.getElementById('vocab-answer-input').value = '';
-        document.getElementById('vocab-answer-input').disabled = false;
-        document.getElementById('vocab-submit-answer').disabled = false;
-        document.getElementById('vocab-result').classList.add('hidden');
+        // 生成选择题选项
+        this.generateVocabCheckinChoices(question);
+        
+        // 重置选择按钮状态
+        document.querySelectorAll('.vocab-choice').forEach(btn => {
+            btn.classList.remove('selected', 'correct', 'wrong');
+            btn.disabled = false;
+        });
+        
+        // 隐藏反馈
+        document.getElementById('vocab-checkin-feedback').classList.add('hidden');
     }
     
     submitKanaCheckinAnswer() {
@@ -3041,22 +3079,75 @@ class KanaApp {
         this.updateKanaProgress(question, isCorrect);
     }
     
-    submitVocabCheckinAnswer() {
-        const input = document.getElementById('vocab-answer-input');
-        const userAnswer = input.value.trim();
-        const question = this.vocabCheckinQuestions[this.currentCheckinQuestion];
-        const correctAnswers = question.meaning.split('、').map(m => m.trim());
+    generateVocabCheckinChoices(question) {
+        const correctAnswer = question.meaning;
+        const choices = [correctAnswer];
+        const vocabData = this.vocabCheckinLevel === 'N5' ? N5_WORDS : N4_WORDS;
         
-        input.disabled = true;
-        document.getElementById('vocab-submit-answer').disabled = true;
-        
-        const isCorrect = correctAnswers.some(answer => 
-            userAnswer.includes(answer) || answer.includes(userAnswer)
+        // 生成3个错误选项
+        const wrongChoices = [];
+        const allWords = vocabData.filter(word => 
+            word.kana !== question.kana && 
+            word.meaning !== correctAnswer
         );
+        
+        // 优先选择同类型的词作为干扰项
+        const sameTypeWords = allWords.filter(word => word.type === question.type);
+        const otherWords = allWords.filter(word => word.type !== question.type);
+        
+        // 从同类型词中选择干扰项
+        while (wrongChoices.length < 3 && sameTypeWords.length > 0) {
+            const randomIndex = Math.floor(Math.random() * sameTypeWords.length);
+            const randomWord = sameTypeWords.splice(randomIndex, 1)[0];
+            if (!wrongChoices.includes(randomWord.meaning)) {
+                wrongChoices.push(randomWord.meaning);
+            }
+        }
+        
+        // 如果同类型词不够，从其他词中选择
+        while (wrongChoices.length < 3 && otherWords.length > 0) {
+            const randomIndex = Math.floor(Math.random() * otherWords.length);
+            const randomWord = otherWords.splice(randomIndex, 1)[0];
+            if (!wrongChoices.includes(randomWord.meaning)) {
+                wrongChoices.push(randomWord.meaning);
+            }
+        }
+        
+        // 将正确答案和错误选项合并并打乱
+        choices.push(...wrongChoices);
+        
+        // Fisher-Yates 洗牌算法
+        for (let i = choices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [choices[i], choices[j]] = [choices[j], choices[i]];
+        }
+        
+        // 记录正确答案的位置
+        this.vocabCheckinCorrectIndex = choices.indexOf(correctAnswer);
+        
+        // 设置选择按钮文本
+        choices.forEach((choice, index) => {
+            document.getElementById(`vocab-choice-${index}`).textContent = choice;
+        });
+    }
+    
+    submitVocabCheckinChoice(selectedIndex) {
+        const question = this.vocabCheckinQuestions[this.currentCheckinQuestion];
+        const isCorrect = selectedIndex === this.vocabCheckinCorrectIndex;
         
         if (isCorrect) {
             this.checkinCorrectCount++;
         }
+        
+        // 显示答案反馈
+        document.querySelectorAll('.vocab-choice').forEach((btn, index) => {
+            btn.disabled = true;
+            if (index === this.vocabCheckinCorrectIndex) {
+                btn.classList.add('correct');
+            } else if (index === selectedIndex && !isCorrect) {
+                btn.classList.add('wrong');
+            }
+        });
         
         // 显示结果
         this.showVocabCheckinResult(isCorrect, question.meaning, question.kanji);
@@ -3080,17 +3171,28 @@ class KanaApp {
     }
     
     showVocabCheckinResult(isCorrect, correctMeaning, kanji) {
-        const resultEl = document.getElementById('vocab-result');
-        const resultTextEl = resultEl.querySelector('.result-text');
-        const correctAnswerEl = resultEl.querySelector('.correct-answer');
+        const feedback = document.getElementById('vocab-checkin-feedback');
+        const feedbackText = document.getElementById('vocab-checkin-feedback-text');
         
-        resultEl.className = `result-display ${isCorrect ? 'correct' : 'wrong'}`;
-        resultTextEl.textContent = isCorrect ? '正确！' : '错误';
-        correctAnswerEl.textContent = isCorrect ? 
-            `很棒！汉字：${kanji}` : 
-            `正确答案：${correctMeaning}（汉字：${kanji}）`;
+        feedback.classList.remove('hidden');
+        feedback.classList.remove('correct', 'wrong');
+        feedback.classList.add(isCorrect ? 'correct' : 'wrong');
         
-        resultEl.classList.remove('hidden');
+        const statusText = isCorrect ? '<span style="color: #28a745;">✓ 正确！</span>' : '<span style="color: #dc3545;">✗ 错误</span>';
+        
+        feedbackText.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 5px;">${statusText}</div>
+                    <div style="color: #666; font-size: 14px;">
+                        ${isCorrect ? '很棒！' : '正确答案：' + correctMeaning}
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; color: #666; font-size: 14px;">
+                汉字：${kanji}
+            </div>
+        `;
     }
     
     nextKanaCheckinQuestion() {

@@ -450,16 +450,33 @@
             </div>
         </div>
 
+        <!-- 单词打卡级别选择界面 -->
+        <div id="vocab-checkin-level-screen" class="screen hidden">
+            <div class="header">
+                <button id="back-to-modes-from-vocab-level">返回</button>
+                <h2>选择单词级别</h2>
+            </div>
+            
+            <div class="level-selection-area">
+                <div class="level-options">
+                    <button class="level-option-btn" id="select-n5-vocab">
+                        <div class="level-title">N5 单词打卡</div>
+                        <div class="level-desc">基础词汇，适合初学者</div>
+                    </button>
+                    <button class="level-option-btn" id="select-n4-vocab">
+                        <div class="level-title">N4 单词打卡</div>
+                        <div class="level-desc">进阶词汇，适合有一定基础的学习者</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- 单词打卡界面 -->
         <div id="vocab-checkin-screen" class="screen hidden">
             <div class="header">
                 <button id="back-to-modes-from-vocab-checkin">返回</button>
                 <h2>单词每日打卡</h2>
                 <div class="checkin-info">
-                    <div class="level-selector">
-                        <button id="vocab-checkin-n5" class="level-btn active">N5</button>
-                        <button id="vocab-checkin-n4" class="level-btn">N4</button>
-                    </div>
                     <span>连续打卡: <span id="vocab-checkin-streak">0</span>天</span>
                     <span>今日进度: <span id="vocab-checkin-progress">0/20</span></span>
                 </div>
@@ -472,15 +489,33 @@
                     <div class="question-number">第 <span id="vocab-current-question">1</span> / 20 题</div>
                 </div>
                 
-                <div class="answer-area">
-                    <input type="text" id="vocab-answer-input" placeholder="输入中文意思" autocomplete="off">
-                    <button id="vocab-submit-answer">提交</button>
+                <div class="vocab-choices-area">
+                    <div class="choice-buttons">
+                        <div class="choice-item">
+                            <div class="choice-number">1</div>
+                            <button class="choice-btn vocab-choice" data-choice="0" data-label="1" id="vocab-choice-0"></button>
+                        </div>
+                        <div class="choice-item">
+                            <div class="choice-number">2</div>
+                            <button class="choice-btn vocab-choice" data-choice="1" data-label="2" id="vocab-choice-1"></button>
+                        </div>
+                        <div class="choice-item">
+                            <div class="choice-number">3</div>
+                            <button class="choice-btn vocab-choice" data-choice="2" data-label="3" id="vocab-choice-2"></button>
+                        </div>
+                        <div class="choice-item">
+                            <div class="choice-number">4</div>
+                            <button class="choice-btn vocab-choice" data-choice="3" data-label="4" id="vocab-choice-3"></button>
+                        </div>
+                    </div>
+                    <div class="keyboard-hint">
+                        <span>💡 提示：可以使用键盘 1-4 数字键快速选择答案，回车键进入下一题</span>
+                    </div>
                 </div>
                 
-                <div id="vocab-result" class="result-display hidden">
-                    <div class="result-text"></div>
-                    <div class="correct-answer"></div>
-                    <button id="vocab-next-question">下一题</button>
+                <div id="vocab-checkin-feedback" class="feedback hidden">
+                    <div id="vocab-checkin-feedback-text"></div>
+                    <button id="vocab-checkin-next-question" class="next-btn">下一题</button>
                 </div>
             </div>
 
